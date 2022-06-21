@@ -1,0 +1,65 @@
+name: Build and push base images
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-and-push.yml
+      - ubuntu/**
+      - torch/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-and-push.yml
+      - ubuntu/**
+      - torch/**
+  schedule:
+    - cron: "0 0 1 * *"
+jobs:
+  base:
+    strategy:
+      matrix:
+        nvidia:
+          - cuda: 11.2.2
+            cudnn: 8
+          - cuda: 11.5.2
+            cudnn: 8
+        ubuntu:
+          - 20.04
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    env:
+      CUDA_FULL_VERSION: "${{ matrix.nvidia.cuda }}"
+      CUDNN_MAJOR_VERSION: "${{ matrix.nvidia.cudnn }}"
+      UBUNTU_VERSION: "${{ matrix.ubuntu }}"
+      BASE_IMAGE: "ghcr.io/${{ github.repository_owner }}/hailab/base:ubuntu${{ matrix.ubuntu }}-cuda${{ matrix.nvidia.cuda }}-cudnn${{ matrix.nvidia.cudnn }}-cn"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build image
+        run: docker build --build-arg CUDA_FULL_VERSION --build-arg CUDNN_MAJOR_VERSION --build-arg UBUNTU_VERSION --label "com.github.actions.run_id=${{ github.run_number }}" --label="org.opencontainers.image.created=$(date -u --iso-8601=seconds)" -t "${BASE_IMAGE}" .
+        working-directory: ubuntu
+      - name: Log in to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+      - name: Push image
+        run: docker push "${BASE_IMAGE}"
+  torch:
+    runs-on: ubuntu-latest
+    needs:
+      - base
+    permissions:
+      packages: write
+      contents: read
+    env:
+      BASE_IMAGE: "ghcr.io/${{ github.repository_owner }}/hailab/base:pytorch-cuda11.5-cudnn8"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build image
+        run: docker build --label "com.github.actions.run_id=${{ github.run_number }}" --label="org.opencontainers.image.created=$(date -u --iso-8601=seconds)" -t "${BASE_IMAGE}" .
+        working-directory: torch
+      - name: Log in to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+      - name: Push image
+        run: docker push "${BASE_IMAGE}"
