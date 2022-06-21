@@ -7,13 +7,6 @@ on:
       - .github/workflows/build-and-push.yml
       - ubuntu/**
       - torch/**
-  pull_request:
-    branches:
-      - main
-    paths:
-      - .github/workflows/build-and-push.yml
-      - ubuntu/**
-      - torch/**
   schedule:
     - cron: "0 0 1 * *"
 jobs:
@@ -38,11 +31,13 @@ jobs:
       BASE_IMAGE: "ghcr.io/${{ github.repository_owner }}/hailab/base:ubuntu${{ matrix.ubuntu }}-cuda${{ matrix.nvidia.cuda }}-cudnn${{ matrix.nvidia.cudnn }}-cn"
     steps:
       - uses: actions/checkout@v3
-      - name: Build image
-        run: docker build --build-arg CUDA_FULL_VERSION --build-arg CUDNN_MAJOR_VERSION --build-arg UBUNTU_VERSION --label "com.github.actions.run_id=${{ github.run_number }}" --label="org.opencontainers.image.created=$(date -u --iso-8601=seconds)" -t "${BASE_IMAGE}" .
-        working-directory: ubuntu
       - name: Log in to registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+      - name: Pull existing base image
+        run: docker pull "${BASE_IMAGE}"
+      - name: Build image
+        run: docker build --build-arg CUDA_FULL_VERSION --build-arg CUDNN_MAJOR_VERSION --build-arg UBUNTU_VERSION --label "com.github.actions.run_id=${{ github.run_number }}" --label "com.github.commits.sha=${{ github.sha }}" --label="org.opencontainers.image.created=$(date -u --iso-8601=seconds)" --label="org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" -t "${BASE_IMAGE}" .
+        working-directory: ubuntu
       - name: Push image
         run: docker push "${BASE_IMAGE}"
   torch:
@@ -56,10 +51,12 @@ jobs:
       BASE_IMAGE: "ghcr.io/${{ github.repository_owner }}/hailab/base:pytorch-cuda11.5-cudnn8"
     steps:
       - uses: actions/checkout@v3
-      - name: Build image
-        run: docker build --label "com.github.actions.run_id=${{ github.run_number }}" --label="org.opencontainers.image.created=$(date -u --iso-8601=seconds)" -t "${BASE_IMAGE}" .
-        working-directory: torch
       - name: Log in to registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+      - name: Pull existing base image
+        run: docker pull "${BASE_IMAGE}"
+      - name: Build image
+        run: docker build --label "com.github.actions.run_id=${{ github.run_number }}" --label "com.github.commits.sha=${{ github.sha }}" --label="org.opencontainers.image.created=$(date -u --iso-8601=seconds)" --label="org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" -t "${BASE_IMAGE}" .
+        working-directory: torch
       - name: Push image
         run: docker push "${BASE_IMAGE}"

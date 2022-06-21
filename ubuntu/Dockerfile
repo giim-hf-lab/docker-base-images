@@ -4,7 +4,10 @@ ARG UBUNTU_VERSION
 
 FROM nvidia/cuda:${CUDA_FULL_VERSION}-cudnn${CUDNN_MAJOR_VERSION}-runtime-ubuntu${UBUNTU_VERSION}
 
-LABEL org.opencontainers.image.source="https://github.com/giim-hf-lab/docker-base-images"
+LABEL maintainer="Tinson Lai"
+LABEL org.opencontainers.image.authors="Tinson Lai"
+LABEL org.opencontainers.image.vendor="Human Factor Team, Institute of Intelligent Manufacturing, Guangdong Academy of Sciences"
+LABEL org.opencontainers.image.base.name="nvidia/cuda"
 
 ARG DEBIAN_FRONTEND=noninteractive
 
