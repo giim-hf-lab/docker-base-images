@@ -18,9 +18,8 @@ RUN apt-get install -y gcc
 
 ADD https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh /tmp/miniconda.sh
 COPY .condarc /root/.condarc
-COPY pip.conf /root/.config/pip/pip.conf
 RUN /bin/bash /tmp/miniconda.sh -b -p /opt/conda
-RUN /opt/conda/bin/conda install -y --update-all python=3.9 pip
+RUN /opt/conda/bin/conda install -y --update-all python pip
 
 RUN rm -f /tmp/miniconda.sh
 RUN rm -rf /var/lib/apt/lists

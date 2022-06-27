@@ -28,7 +28,7 @@ jobs:
       CUDA_FULL_VERSION: "${{ matrix.nvidia.cuda }}"
       CUDNN_MAJOR_VERSION: "${{ matrix.nvidia.cudnn }}"
       UBUNTU_VERSION: "${{ matrix.ubuntu }}"
-      BASE_IMAGE: "ghcr.io/${{ github.repository_owner }}/hailab/base:ubuntu${{ matrix.ubuntu }}-cuda${{ matrix.nvidia.cuda }}-cudnn${{ matrix.nvidia.cudnn }}-cn"
+      BASE_IMAGE: "ghcr.io/${{ github.repository_owner }}/hailab/base:ubuntu${{ matrix.ubuntu }}-cuda${{ matrix.nvidia.cuda }}-cudnn${{ matrix.nvidia.cudnn }}"
     steps:
       - uses: actions/checkout@v3
       - name: Log in to registry
@@ -38,7 +38,14 @@ jobs:
         working-directory: ubuntu
       - name: Push image
         run: docker push "${BASE_IMAGE}"
-  torch:
+  variants:
+    strategy:
+      matrix:
+        variants:
+          - name: pytorch
+            dir: torch
+          - name: paddle
+            dir: paddle
     runs-on: ubuntu-latest
     needs:
       - base
@@ -46,31 +53,13 @@ jobs:
       packages: write
       contents: read
     env:
-      BASE_IMAGE: "ghcr.io/${{ github.repository_owner }}/hailab/base:pytorch-cuda11.5-cudnn8"
+      BASE_IMAGE: "ghcr.io/${{ github.repository_owner }}/hailab/base:${{ matrix.variants.name }}"
     steps:
       - uses: actions/checkout@v3
       - name: Log in to registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
       - name: Build image
         run: docker build --label "com.github.actions.run_id=${{ github.run_number }}" --label "com.github.commits.sha=${{ github.sha }}" --label="org.opencontainers.image.created=$(date -u --iso-8601=seconds)" --label="org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" -t "${BASE_IMAGE}" .
-        working-directory: torch
-      - name: Push image
-        run: docker push "${BASE_IMAGE}"
-  paddle:
-    runs-on: ubuntu-latest
-    needs:
-      - base
-    permissions:
-      packages: write
-      contents: read
-    env:
-      BASE_IMAGE: "ghcr.io/${{ github.repository_owner }}/hailab/base:paddle-cuda11.2-cudnn8"
-    steps:
-      - uses: actions/checkout@v3
-      - name: Log in to registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
-      - name: Build image
-        run: docker build --label "com.github.actions.run_id=${{ github.run_number }}" --label "com.github.commits.sha=${{ github.sha }}" --label="org.opencontainers.image.created=$(date -u --iso-8601=seconds)" --label="org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" -t "${BASE_IMAGE}" .
-        working-directory: paddle
+        working-directory: "${{ matrix.variants.dir }}"
       - name: Push image
         run: docker push "${BASE_IMAGE}"
